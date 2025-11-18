@@ -1,0 +1,17 @@
+{
+  "class_indices": {
+    "Potato___Early_blight": 0,
+    "Potato___Late_blight": 1,
+    "Potato___healthy": 2
+  },
+  "total_train_samples": 1721,
+  "total_test_samples": 431,
+  "test_accuracy": 0.9768,
+  "img_size": 224,
+  "num_classes": 3,
+  "model_info": {
+    "architecture": "MobileNetV2",
+    "framework": "TensorFlow/Keras",
+    "input_shape": [224, 224, 3]
+  }
+}

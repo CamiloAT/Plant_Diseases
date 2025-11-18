@@ -1,0 +1,35 @@
+# Entornos virtuales
+/venv/
+env/
+ENV/
+.venv/
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Entornos virtuales
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Streamlit
+.streamlit/
+
+# Dataset temporal (si existe)
+potato_dataset/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

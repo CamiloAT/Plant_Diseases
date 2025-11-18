@@ -1,5 +1,5 @@
 """
-Aplicación Web de Reconocimiento de Señales de Tráfico
+Aplicación Web de Reconocimiento de Enfermedades en Papa
 Usando Streamlit y TensorFlow
 """
 
@@ -7,91 +7,83 @@ import streamlit as st
 import tensorflow as tf
 from PIL import Image
 import numpy as np
+import json
+import os
+import gdown  # Para descargar desde Google Drive
 
 # ============================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ============================================
 st.set_page_config(
-    page_title="Reconocimiento de Señales de Tráfico",
-    page_icon="🚦",
+    page_title="Reconocimiento de Enfermedades en Papa",
+    page_icon="🥔",
     layout="wide"
 )
 
 # ============================================
-# DICCIONARIO DE CLASES (43 señales de tráfico)
+# DESCARGAR MODELO DESDE GOOGLE DRIVE (SI NO EXISTE)
 # ============================================
-# Dataset GTSRB - German Traffic Sign Recognition Benchmark
-CLASES_SEÑALES = {
-    0: 'Límite de velocidad (20 km/h)',
-    1: 'Límite de velocidad (30 km/h)',
-    2: 'Límite de velocidad (50 km/h)',
-    3: 'Límite de velocidad (60 km/h)',
-    4: 'Límite de velocidad (70 km/h)',
-    5: 'Límite de velocidad (80 km/h)',
-    6: 'Fin de límite de velocidad (80 km/h)',
-    7: 'Límite de velocidad (100 km/h)',
-    8: 'Límite de velocidad (120 km/h)',
-    9: 'Prohibido adelantar',
-    10: 'Prohibido adelantar a camiones',
-    11: 'Intersección con prioridad',
-    12: 'Carretera con prioridad',
-    13: 'Ceda el paso',
-    14: 'Stop',
-    15: 'Prohibido el paso de vehículos',
-    16: 'Prohibido el paso de camiones',
-    17: 'Prohibido el paso',
-    18: 'Peligro general',
-    19: 'Curva peligrosa a la izquierda',
-    20: 'Curva peligrosa a la derecha',
-    21: 'Doble curva',
-    22: 'Carretera con baches',
-    23: 'Carretera resbaladiza',
-    24: 'Estrechamiento de la calzada por la derecha',
-    25: 'Obras',
-    26: 'Semáforo',
-    27: 'Peatones',
-    28: 'Niños cruzando',
-    29: 'Cruce de bicicletas',
-    30: 'Peligro de hielo/nieve',
-    31: 'Animales salvajes',
-    32: 'Fin de todas las restricciones de velocidad',
-    33: 'Gire a la derecha',
-    34: 'Gire a la izquierda',
-    35: 'Solo adelante',
-    36: 'Adelante o derecha',
-    37: 'Adelante o izquierda',
-    38: 'Mantenga su derecha',
-    39: 'Mantenga su izquierda',
-    40: 'Rotonda obligatoria',
-    41: 'Fin de prohibición de adelantar',
-    42: 'Fin de prohibición de adelantar a camiones'
-}
+def descargar_modelo_si_necesario():
+    """
+    Descarga el modelo desde Google Drive si no existe localmente.
+    """
+    modelo_path = 'best_potato_model.keras'
+    
+    if not os.path.exists(modelo_path):
+        st.info("⏳ Descargando modelo... (esto puede tardar un momento)")
+        
+        # URL de Google Drive - REEMPLAZA ESTO CON TU LINK
+        # Formato: https://drive.google.com/uc?id=FILE_ID
+        gdrive_url = "https://drive.google.com/uc?id=YOUR_FILE_ID_HERE"
+        
+        try:
+            gdown.download(gdrive_url, modelo_path, quiet=False)
+            st.success("✅ Modelo descargado exitosamente")
+        except Exception as e:
+            st.error(f"❌ Error al descargar el modelo: {str(e)}")
+            st.error("Por favor, configura el URL de Google Drive en el código.")
+            st.stop()
+    
+    return modelo_path
+
 
 # ============================================
-# CARGAR MODELO
+# CARGAR MODELO Y METADATOS
 # ============================================
 @st.cache_resource
-def cargar_modelo():
+def cargar_modelo_y_metadatos():
     """
-    Carga el modelo entrenado.
+    Carga el modelo entrenado y sus metadatos.
     Usa @st.cache_resource para cargar el modelo solo una vez.
     """
+    # Descargar modelo si no existe
+    descargar_modelo_si_necesario()
+    
     try:
-        modelo = tf.keras.models.load_model('modelo_trafico.h5')
-        return modelo
-    except:
-        st.error("❌ No se encontró el archivo 'modelo_trafico.h5'. Por favor, ejecuta primero 'python entrenamiento.py'")
+        modelo = tf.keras.models.load_model('best_potato_model.keras')
+        
+        # Intentar cargar metadatos si existen
+        metadatos = None
+        if os.path.exists('model_metadata.json'):
+            with open('model_metadata.json', 'r') as f:
+                metadatos = json.load(f)
+        
+        return modelo, metadatos
+    except Exception as e:
+        st.error(f"❌ Error al cargar el modelo: {str(e)}")
+        st.error("Por favor, asegúrate de que 'best_potato_model.keras' existe en el directorio.")
         st.stop()
 
 # ============================================
 # FUNCIÓN DE PREPROCESAMIENTO
 # ============================================
-def preprocesar_imagen(imagen):
+def preprocesar_imagen(imagen, img_size=224):
     """
     Preprocesa la imagen para que sea compatible con el modelo.
     
     Args:
         imagen: Imagen PIL
+        img_size: Tamaño de la imagen (por defecto 224x224)
     
     Returns:
         Imagen preprocesada como array numpy
@@ -100,8 +92,8 @@ def preprocesar_imagen(imagen):
     if imagen.mode != 'RGB':
         imagen = imagen.convert('RGB')
     
-    # Redimensionar a 30x30 (mismo tamaño del entrenamiento)
-    imagen = imagen.resize((30, 30))
+    # Redimensionar a 224x224 (mismo tamaño del entrenamiento)
+    imagen = imagen.resize((img_size, img_size))
     
     # Convertir a array numpy
     img_array = np.array(imagen)
@@ -119,7 +111,7 @@ def preprocesar_imagen(imagen):
 # ============================================
 
 # Título y descripción
-st.title("🚦 Reconocimiento de Señales de Tráfico")
+st.title("🥔 Reconocimiento de Enfermedades en Papa")
 st.markdown("### Sistema de Clasificación Automática usando Deep Learning")
 st.markdown("---")
 
@@ -128,20 +120,43 @@ with st.expander("ℹ️ Acerca de este proyecto"):
     st.write("""
     **Proyecto Universitario de Machine Learning**
     
-    Este sistema utiliza una Red Neuronal Convolucional (CNN) entrenada con el dataset 
-    GTSRB (German Traffic Sign Recognition Benchmark) que contiene 43 tipos diferentes 
-    de señales de tráfico.
+    Este sistema utiliza una Red Neuronal Convolucional (CNN) con Transfer Learning (MobileNetV2) 
+    entrenada con el dataset PlantVillage para detectar enfermedades en hojas de papa.
     
     **Características:**
-    - 🧠 Modelo: CNN con TensorFlow/Keras
-    - 📊 Dataset: GTSRB (más de 50,000 imágenes)
-    - 🎯 Clases: 43 tipos de señales de tráfico
-    - 🖼️ Entrada: Imágenes de 30x30 píxeles
+    - 🧠 Modelo: CNN con Transfer Learning (MobileNetV2)
+    - 📊 Dataset: PlantVillage - Potato Disease Dataset
+    - 🎯 Clases: Enfermedades comunes en plantas de papa
+    - 🖼️ Entrada: Imágenes de 224x224 píxeles
+    - 📈 Técnicas: Data Augmentation, Fine-tuning, Class Weighting
     """)
 
-# Cargar modelo
-modelo = cargar_modelo()
-st.success("✅ Modelo cargado exitosamente")
+# Cargar modelo y metadatos
+modelo, metadatos = cargar_modelo_y_metadatos()
+
+# Obtener información del modelo
+if metadatos:
+    num_clases = metadatos.get('num_classes', 'N/A')
+    img_size = metadatos.get('img_size', 224)
+    test_accuracy = metadatos.get('test_accuracy', 0) * 100
+    class_indices = metadatos.get('class_indices', {})
+    # Invertir el diccionario para obtener nombre por índice
+    CLASES_ENFERMEDADES = {v: k for k, v in class_indices.items()}
+    
+    st.success(f"✅ Modelo cargado exitosamente - Accuracy: {test_accuracy:.2f}%")
+    
+    if 'class_distribution' in metadatos:
+        with st.expander("📊 Información del Dataset"):
+            st.write(f"**Total de clases:** {num_clases}")
+            st.write(f"**Imágenes de entrenamiento:** {metadatos.get('total_train_samples', 'N/A')}")
+            st.write(f"**Imágenes de prueba:** {metadatos.get('total_test_samples', 'N/A')}")
+            st.write(f"**Precisión del modelo:** {metadatos.get('test_precision', 0) * 100:.2f}%")
+            st.write(f"**Recall del modelo:** {metadatos.get('test_recall', 0) * 100:.2f}%")
+            st.write(f"**F1-Score:** {metadatos.get('f1_score', 0) * 100:.2f}%")
+else:
+    img_size = 224
+    CLASES_ENFERMEDADES = {}
+    st.warning("⚠️ Modelo cargado sin metadatos. Algunas funciones pueden estar limitadas.")
 
 # Crear dos columnas
 col1, col2 = st.columns([1, 1])
@@ -151,7 +166,7 @@ with col1:
     
     # File uploader
     archivo_subido = st.file_uploader(
-        "Selecciona una imagen de una señal de tráfico",
+        "Selecciona una imagen de una hoja de papa",
         type=['jpg', 'jpeg', 'png'],
         help="Formatos aceptados: JPG, JPEG, PNG"
     )
@@ -162,10 +177,10 @@ with col1:
         st.image(imagen, caption='Imagen cargada', use_container_width=True)
         
         # Botón para realizar predicción
-        if st.button("🔍 Analizar Señal de Tráfico", type="primary", use_container_width=True):
+        if st.button("🔍 Analizar Hoja de Papa", type="primary", use_container_width=True):
             with st.spinner('Analizando imagen...'):
                 # Preprocesar imagen
-                img_procesada = preprocesar_imagen(imagen)
+                img_procesada = preprocesar_imagen(imagen, img_size)
                 
                 # Realizar predicción
                 predicciones = modelo.predict(img_procesada, verbose=0)
@@ -184,14 +199,27 @@ with col2:
     
     if 'clase_predicha' in st.session_state:
         # Mostrar resultado principal
-        st.markdown("### Predicción:")
+        st.markdown("### Diagnóstico:")
         
         # Crear un contenedor destacado para el resultado
         resultado_container = st.container()
         with resultado_container:
-            # Nombre de la señal
-            nombre_señal = CLASES_SEÑALES[st.session_state.clase_predicha]
-            st.markdown(f"## 🚸 **{nombre_señal}**")
+            # Nombre de la enfermedad
+            if CLASES_ENFERMEDADES:
+                nombre_enfermedad = CLASES_ENFERMEDADES[st.session_state.clase_predicha]
+            else:
+                nombre_enfermedad = f"Clase {st.session_state.clase_predicha}"
+            
+            # Emoji según el tipo de enfermedad
+            if 'healthy' in nombre_enfermedad.lower():
+                emoji = "✅"
+                st.success(f"## {emoji} **{nombre_enfermedad}**")
+            elif 'early' in nombre_enfermedad.lower():
+                emoji = "⚠️"
+                st.warning(f"## {emoji} **{nombre_enfermedad}**")
+            else:
+                emoji = "🦠"
+                st.error(f"## {emoji} **{nombre_enfermedad}**")
             
             # Barra de confianza
             st.markdown(f"**Confianza:** {st.session_state.confianza:.2f}%")
@@ -203,7 +231,7 @@ with col2:
             elif st.session_state.confianza > 70:
                 st.info("ℹ️ Predicción confiable")
             else:
-                st.warning("⚠️ Predicción con baja confianza")
+                st.warning("⚠️ Predicción con baja confianza - Se recomienda verificar con un experto")
         
         st.markdown("---")
         
@@ -215,7 +243,10 @@ with col2:
         
         for i, idx in enumerate(top_3_indices, 1):
             probabilidad = st.session_state.predicciones[idx] * 100
-            nombre = CLASES_SEÑALES[idx]
+            if CLASES_ENFERMEDADES:
+                nombre = CLASES_ENFERMEDADES[idx]
+            else:
+                nombre = f"Clase {idx}"
             
             col_num, col_nombre, col_prob = st.columns([0.5, 3, 1])
             with col_num:
@@ -224,24 +255,110 @@ with col2:
                 st.markdown(f"{nombre}")
             with col_prob:
                 st.markdown(f"`{probabilidad:.1f}%`")
+        
+        # Recomendaciones
+        st.markdown("---")
+        st.markdown("### 💡 Recomendaciones:")
+        
+        if 'healthy' in nombre_enfermedad.lower():
+            st.info("""
+            ✅ **Planta saludable detectada**
+            - Continúa con las prácticas de cuidado actuales
+            - Mantén un monitoreo regular
+            - Asegura buena ventilación y riego adecuado
+            """)
+        elif 'early blight' in nombre_enfermedad.lower():
+            st.warning("""
+            ⚠️ **Tizón Temprano (Early Blight) detectado**
+            - Aplicar fungicidas a base de cobre
+            - Mejorar la circulación de aire
+            - Evitar riego por aspersión
+            - Eliminar hojas afectadas
+            """)
+        elif 'late blight' in nombre_enfermedad.lower():
+            st.error("""
+            🦠 **Tizón Tardío (Late Blight) detectado**
+            - ⚠️ ACCIÓN URGENTE REQUERIDA
+            - Aplicar fungicidas sistémicos inmediatamente
+            - Aislar plantas afectadas
+            - Mejorar drenaje del suelo
+            - Consultar con un agrónomo
+            """)
     
     else:
         st.info("👆 Carga una imagen y presiona 'Analizar' para ver los resultados")
 
 # ============================================
-# SECCIÓN ADICIONAL: LISTA DE SEÑALES
+# SECCIÓN ADICIONAL: LISTA DE ENFERMEDADES
 # ============================================
 st.markdown("---")
-st.subheader("📋 Lista Completa de Señales Reconocidas")
+st.subheader("📋 Enfermedades Reconocidas por el Sistema")
 
-with st.expander("Ver todas las señales (43 clases)"):
-    # Mostrar en 3 columnas
-    cols = st.columns(3)
+if CLASES_ENFERMEDADES:
+    with st.expander(f"Ver todas las clases ({len(CLASES_ENFERMEDADES)})"):
+        # Mostrar en 2 columnas
+        cols = st.columns(2)
+        
+        for idx, nombre in CLASES_ENFERMEDADES.items():
+            col_idx = idx % 2
+            with cols[col_idx]:
+                if 'healthy' in nombre.lower():
+                    st.markdown(f"✅ **{idx}.** {nombre}")
+                else:
+                    st.markdown(f"🦠 **{idx}.** {nombre}")
+else:
+    st.info("ℹ️ Información de clases no disponible. Carga el archivo 'model_metadata.json' para ver las clases.")
+
+# ============================================
+# INFORMACIÓN ADICIONAL
+# ============================================
+st.markdown("---")
+st.subheader("📚 Información sobre Enfermedades Comunes en Papa")
+
+with st.expander("🦠 Tizón Temprano (Early Blight)"):
+    st.write("""
+    **Causado por:** Alternaria solani
     
-    for idx, nombre in CLASES_SEÑALES.items():
-        col_idx = idx % 3
-        with cols[col_idx]:
-            st.markdown(f"**{idx}.** {nombre}")
+    **Síntomas:**
+    - Manchas circulares concéntricas en las hojas
+    - Color marrón oscuro
+    - Afecta principalmente hojas más viejas
+    
+    **Control:**
+    - Fungicidas a base de cobre
+    - Rotación de cultivos
+    - Eliminación de residuos vegetales
+    """)
+
+with st.expander("🦠 Tizón Tardío (Late Blight)"):
+    st.write("""
+    **Causado por:** Phytophthora infestans
+    
+    **Síntomas:**
+    - Manchas irregulares de color verde oscuro a negro
+    - Moho blanco en el envés de las hojas
+    - Propagación rápida en condiciones húmedas
+    
+    **Control:**
+    - Fungicidas sistémicos
+    - Mejorar drenaje
+    - Plantar variedades resistentes
+    - Evitar riego por aspersión
+    """)
+
+with st.expander("✅ Planta Saludable (Healthy)"):
+    st.write("""
+    **Características:**
+    - Hojas verdes uniformes
+    - Sin manchas ni decoloraciones
+    - Crecimiento vigoroso
+    
+    **Mantenimiento:**
+    - Riego adecuado
+    - Fertilización balanceada
+    - Monitoreo regular
+    - Buena ventilación
+    """)
 
 # ============================================
 # PIE DE PÁGINA
@@ -249,7 +366,8 @@ with st.expander("Ver todas las señales (43 clases)"):
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666;'>
-    <p>Desarrollado con ❤️ usando TensorFlow y Streamlit</p>
-    <p>Proyecto Universitario - 2025</p>
+    <p>🥔 Desarrollado con ❤️ usando TensorFlow, MobileNetV2 y Streamlit</p>
+    <p>Proyecto Universitario - Inteligencia Computacional - 2025</p>
+    <p>Dataset: PlantVillage - Potato Disease Classification</p>
 </div>
 """, unsafe_allow_html=True)

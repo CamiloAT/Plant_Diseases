@@ -1,26 +1,27 @@
-# Dependencias para el Proyecto de Reconocimiento de Señales de Tráfico
+# Dependencias para el Proyecto de Reconocimiento de Enfermedades en Papa
 
 # Framework de Deep Learning
-tensorflow>=2.13.0
+tensorflow
 
-# Descarga de datasets desde Kaggle
-kagglehub>=0.2.0
+# Descarga de modelos desde Google Drive
+gdown
 
 # Aplicación Web
-streamlit>=1.28.0
+streamlit
 
 # Procesamiento de Imágenes
-Pillow>=10.0.0
+Pillow
 
 # Computación Numérica
-numpy>=1.24.0
+numpy<2.0.0
 
 # Visualización de Datos
-matplotlib>=3.7.0
+matplotlib
+seaborn
 
 # Procesamiento de datos
-pandas>=2.0.0
-scikit-learn>=1.3.0
+pandas
+scikit-learn
 
 # Nota: Si tienes GPU NVIDIA, puedes instalar tensorflow-gpu en lugar de tensorflow
 # para acelerar el entrenamiento significativamente.
