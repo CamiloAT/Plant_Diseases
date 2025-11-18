@@ -30,18 +30,17 @@ def descargar_modelo_si_necesario():
     modelo_path = 'best_potato_model.keras'
     
     if not os.path.exists(modelo_path):
-        st.info("⏳ Descargando modelo... (esto puede tardar un momento)")
+        st.info("⏳ Descargando modelo desde Google Drive... (esto puede tardar un momento)")
         
-        # URL de Google Drive - REEMPLAZA ESTO CON TU LINK
-        # Formato: https://drive.google.com/uc?id=FILE_ID
-        gdrive_url = "https://drive.google.com/uc?id=YOUR_FILE_ID_HERE"
+        # URL de Google Drive
+        gdrive_url = "https://drive.google.com/uc?id=1NB0-US-83eUoajqbb3ea475VIvAZULKY"
         
         try:
             gdown.download(gdrive_url, modelo_path, quiet=False)
             st.success("✅ Modelo descargado exitosamente")
         except Exception as e:
             st.error(f"❌ Error al descargar el modelo: {str(e)}")
-            st.error("Por favor, configura el URL de Google Drive en el código.")
+            st.error("Verifica que el archivo esté compartido públicamente en Google Drive.")
             st.stop()
     
     return modelo_path
