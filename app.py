@@ -59,6 +59,48 @@ def descargar_modelo_si_necesario():
 
 
 # ============================================
+# CREAR ARQUITECTURA DEL MODELO
+# ============================================
+def crear_modelo(num_classes=3, img_size=224):
+    """
+    Crea la arquitectura del modelo desde cero (API Funcional).
+    Esto evita problemas de compatibilidad entre versiones de Keras.
+    """
+    inputs = tf.keras.Input(shape=(img_size, img_size, 3))
+    
+    # Cargar MobileNetV2 base
+    base_model = tf.keras.applications.MobileNetV2(
+        input_shape=(img_size, img_size, 3),
+        include_top=False,
+        weights='imagenet'
+    )
+    base_model.trainable = False
+    
+    # Construir el modelo
+    x = base_model(inputs, training=False)
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(256, activation='relu', 
+                               kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.3)(x)
+    x = tf.keras.layers.Dense(128, activation='relu', 
+                               kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = tf.keras.layers.Dropout(0.2)(x)
+    outputs = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+    
+    modelo = tf.keras.Model(inputs=inputs, outputs=outputs)
+    
+    modelo.compile(
+        optimizer='adam',
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return modelo
+
+# ============================================
 # CARGAR MODELO Y METADATOS
 # ============================================
 @st.cache_resource
@@ -68,21 +110,34 @@ def cargar_modelo_y_metadatos():
     Usa @st.cache_resource para cargar el modelo solo una vez.
     """
     # Descargar modelo si no existe
-    descargar_modelo_si_necesario()
+    modelo_path = descargar_modelo_si_necesario()
     
     try:
-        # Intentar cargar con opciones de compatibilidad
-        modelo = tf.keras.models.load_model(
-            'best_potato_model.keras',
-            compile=False  # No compilar para evitar problemas de compatibilidad
-        )
-        
-        # Recompilar el modelo con la versión actual de TensorFlow
-        modelo.compile(
-            optimizer='adam',
-            loss='categorical_crossentropy',
-            metrics=['accuracy']
-        )
+        # MÉTODO 1: Intentar cargar el modelo completo (puede fallar con Keras 3)
+        try:
+            modelo = tf.keras.models.load_model(modelo_path, compile=False)
+            modelo.compile(
+                optimizer='adam',
+                loss='categorical_crossentropy',
+                metrics=['accuracy']
+            )
+            st.success("✅ Modelo cargado usando método estándar")
+        except Exception as e1:
+            # MÉTODO 2: Recrear arquitectura y cargar solo pesos
+            st.warning("⚠️ Usando modo de compatibilidad para cargar el modelo...")
+            
+            # Crear arquitectura desde cero
+            modelo = crear_modelo(num_classes=3, img_size=224)
+            
+            # Intentar cargar los pesos del modelo guardado
+            try:
+                modelo_temp = tf.keras.models.load_model(modelo_path, compile=False)
+                modelo.set_weights(modelo_temp.get_weights())
+                st.success("✅ Pesos del modelo cargados exitosamente")
+            except Exception as e2:
+                st.error(f"❌ No se pudieron cargar los pesos: {str(e2)}")
+                st.info("🔄 Usando modelo con pesos de ImageNet (sin entrenamiento específico)")
+                # El modelo ya tiene pesos de ImageNet en la base
         
         # Intentar cargar metadatos si existen
         metadatos = None
@@ -91,15 +146,15 @@ def cargar_modelo_y_metadatos():
                 metadatos = json.load(f)
         
         return modelo, metadatos
+        
     except Exception as e:
-        st.error(f"❌ Error al cargar el modelo: {str(e)}")
-        st.error("El modelo puede tener problemas de compatibilidad entre versiones de TensorFlow.")
+        st.error(f"❌ Error crítico al cargar el modelo: {str(e)}")
         
         # Mostrar información de depuración
         with st.expander("🔍 Información de depuración"):
             st.code(f"Error completo: {str(e)}")
             st.write(f"Versión de TensorFlow: {tf.__version__}")
-            st.write("Intenta volver a entrenar el modelo con TensorFlow 2.20.0")
+            st.write("Versión de Keras:", tf.keras.__version__)
         
         st.stop()
 
