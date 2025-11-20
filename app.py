@@ -348,61 +348,52 @@ with col2:
         st.info("Carga una imagen y presiona 'Analizar Imagen' para ver los resultados")
 
 # ============================================
-# BOTÓN FLOTANTE CON INFORMACIÓN (SIDEBAR)
+# INFORMACIÓN ADICIONAL (PARTE INFERIOR)
 # ============================================
 
-# Estado para controlar la visualización del sidebar
-if 'show_info' not in st.session_state:
-    st.session_state.show_info = False
+st.markdown("---")
+st.markdown("## Información del Sistema")
 
-# Botón flotante en el sidebar
-with st.sidebar:
-    st.markdown("### Información del Sistema")
-    if st.button("Ver Detalles", key="info_button", use_container_width=True):
-        st.session_state.show_info = not st.session_state.show_info
+# Tabs para organizar la información
+tab1, tab2, tab3 = st.tabs(["📊 Métricas del Modelo", "📚 Enfermedades Detectables", "ℹ️ Acerca del Proyecto"])
 
-# Mostrar información si el botón está activo
-if st.session_state.show_info:
-    with st.sidebar:
-        st.markdown("---")
+with tab1:
+    # Métricas del modelo
+    if metadatos:
+        st.markdown("### Rendimiento del Modelo")
         
-        # Métricas del modelo
-        if metadatos:
-            st.markdown("### Métricas del Modelo")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Accuracy", f"{metadatos.get('test_accuracy', 0) * 100:.1f}%")
-                st.metric("Precision", f"{metadatos.get('test_precision', 0) * 100:.1f}%")
-            with col2:
-                st.metric("Recall", f"{metadatos.get('test_recall', 0) * 100:.1f}%")
-                st.metric("F1-Score", f"{metadatos.get('f1_score', 0) * 100:.1f}%")
-            
-            st.markdown("---")
-        
-        # Acerca del proyecto
-        st.markdown("### Acerca del Proyecto")
-        st.markdown("""
-        **Proyecto Universitario de Machine Learning**
-        
-        Sistema de CNN con Transfer Learning (MobileNetV2) 
-        entrenado con el dataset PlantVillage.
-        
-        **Características:**
-        - Modelo: MobileNetV2
-        - Dataset: PlantVillage
-        - Clases: 3 tipos de hojas de papa
-        - Entrada: 224x224 píxeles
-        - Técnicas: Data Augmentation, Fine-tuning
-        """)
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accuracy", f"{metadatos.get('test_accuracy', 0) * 100:.1f}%")
+        with col2:
+            st.metric("Precision", f"{metadatos.get('test_precision', 0) * 100:.1f}%")
+        with col3:
+            st.metric("Recall", f"{metadatos.get('test_recall', 0) * 100:.1f}%")
+        with col4:
+            st.metric("F1-Score", f"{metadatos.get('f1_score', 0) * 100:.1f}%")
         
         st.markdown("---")
         
-        # Información sobre enfermedades
-        st.markdown("### Enfermedades Detectables")
-        
-        with st.expander("Tizón Temprano (Early Blight)"):
+        # Lista de clases reconocidas
+        st.markdown("### Clases Reconocidas")
+        if CLASES_ENFERMEDADES:
+            cols = st.columns(3)
+            for i, (idx, nombre) in enumerate(CLASES_ENFERMEDADES.items()):
+                with cols[i % 3]:
+                    st.markdown(f"**{idx}.** {nombre}")
+    else:
+        st.info("Metadatos del modelo no disponibles")
+
+with tab2:
+    # Información sobre enfermedades
+    st.markdown("### Enfermedades que el Sistema Puede Detectar")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        with st.expander("🦠 Tizón Temprano", expanded=False):
             st.markdown("""
-            **Causado por:** *Alternaria solani*
+            **Nombre científico:** *Alternaria solani*
             
             **Síntomas:**
             - Manchas circulares concéntricas en las hojas
@@ -414,13 +405,14 @@ if st.session_state.show_info:
             - Rotación de cultivos
             - Eliminación de residuos vegetales
             """)
-        
-        with st.expander("Tizón Tardío (Late Blight)"):
+    
+    with col2:
+        with st.expander("🦠 Tizón Tardío", expanded=False):
             st.markdown("""
-            **Causado por:** *Phytophthora infestans*
+            **Nombre científico:** *Phytophthora infestans*
             
             **Síntomas:**
-            - Manchas irregulares de color verde oscuro a negro
+            - Manchas irregulares verde oscuro a negro
             - Moho blanco en el envés de las hojas
             - Propagación rápida en condiciones húmedas
             
@@ -430,8 +422,9 @@ if st.session_state.show_info:
             - Plantar variedades resistentes
             - Evitar riego por aspersión
             """)
-        
-        with st.expander("Planta Saludable (Healthy)"):
+    
+    with col3:
+        with st.expander("✅ Planta Saludable", expanded=False):
             st.markdown("""
             **Características:**
             - Hojas verdes uniformes
@@ -444,10 +437,56 @@ if st.session_state.show_info:
             - Monitoreo regular
             - Buena ventilación
             """)
+
+with tab3:
+    # Acerca del proyecto
+    st.markdown("### Proyecto Universitario de Machine Learning")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown("""
+        Este sistema utiliza **Deep Learning** con Transfer Learning basado en la arquitectura 
+        **MobileNetV2** para clasificar enfermedades en hojas de papa.
         
-        # Lista de clases reconocidas
-        st.markdown("---")
-        st.markdown("### Clases Reconocidas")
-        if CLASES_ENFERMEDADES:
-            for idx, nombre in CLASES_ENFERMEDADES.items():
-                st.markdown(f"**{idx}.** {nombre}")
+        **Características Técnicas:**
+        - **Modelo Base:** MobileNetV2 (pre-entrenado en ImageNet)
+        - **Dataset:** PlantVillage - Potato Disease Dataset
+        - **Clases:** 3 tipos (Saludable, Tizón Temprano, Tizón Tardío)
+        - **Entrada:** Imágenes 224x224 píxeles RGB
+        - **Técnicas:** Data Augmentation, Fine-tuning, Regularización L2
+        - **Framework:** TensorFlow/Keras
+        
+        **Aplicación:**
+        - **Frontend:** Streamlit
+        - **Despliegue:** Streamlit Cloud
+        - **Repositorio:** GitHub
+        """)
+    
+    with col2:
+        st.markdown("""
+        **📖 Sobre el Proyecto**
+        
+        Desarrollado como proyecto 
+        universitario para la materia 
+        de Inteligencia Computacional.
+        
+        **🎯 Objetivo**
+        
+        Proporcionar una herramienta 
+        de diagnóstico rápido y 
+        accesible para agricultores.
+        
+        **📅 Año:** 2025
+        """)
+
+# Footer
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center; color: #666; padding: 1rem;'>
+        <p>Desarrollado con ❤️ usando TensorFlow y Streamlit | Universidad - Inteligencia Computacional 2025</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
