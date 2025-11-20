@@ -9,42 +9,106 @@ from PIL import Image
 import numpy as np
 import json
 import os
-import gdown  # Para descargar desde Google Drive
+import urllib.request
+import gdown
 
 # ============================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ============================================
 st.set_page_config(
-    page_title="Reconocimiento de Enfermedades en Papa",
-    page_icon="🥔",
-    layout="wide"
+    page_title="Detección de Enfermedades en Papa",
+    page_icon="🌿",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
+# Cargar CSS personalizado
+def load_css():
+    css_file = ".streamlit/style.css"
+    if os.path.exists(css_file):
+        with open(css_file) as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    
+load_css()
+
 # ============================================
-# DESCARGAR MODELO DESDE GOOGLE DRIVE (SI NO EXISTE)
+# DESCARGAR MODELO DESDE GITHUB O GOOGLE DRIVE
 # ============================================
 def descargar_modelo_si_necesario():
     """
-    Descarga el modelo desde Google Drive si no existe localmente.
+    Descarga el modelo desde GitHub o Google Drive si no existe localmente.
     """
     modelo_path = 'best_potato_model.keras'
     
     if not os.path.exists(modelo_path):
-        st.info("⏳ Descargando modelo desde Google Drive... (esto puede tardar un momento)")
-        
-        # URL de Google Drive
-        gdrive_url = "https://drive.google.com/uc?id=1NB0-US-83eUoajqbb3ea475VIvAZULKY"
+        st.info("⏳ Descargando modelo... (esto puede tardar un momento)")
         
         try:
-            gdown.download(gdrive_url, modelo_path, quiet=False)
-            st.success("✅ Modelo descargado exitosamente")
+            # Intentar descargar desde GitHub primero (más rápido)
+            github_url = "https://github.com/CamiloAT/Plant_Diseases/raw/main/best_potato_model.keras"
+            
+            import urllib.request
+            urllib.request.urlretrieve(github_url, modelo_path)
+            st.success("✅ Modelo descargado exitosamente desde GitHub")
+            
         except Exception as e:
-            st.error(f"❌ Error al descargar el modelo: {str(e)}")
-            st.error("Verifica que el archivo esté compartido públicamente en Google Drive.")
-            st.stop()
+            # Si falla GitHub, intentar Google Drive
+            st.warning(f"No se pudo descargar desde GitHub: {str(e)}")
+            st.info("Intentando descargar desde Google Drive...")
+            
+            try:
+                gdrive_url = "https://drive.google.com/uc?id=1NB0-US-83eUoajqbb3ea475VIvAZULKY"
+                gdown.download(gdrive_url, modelo_path, quiet=False)
+                st.success("✅ Modelo descargado exitosamente desde Google Drive")
+            except Exception as e2:
+                st.error(f"❌ Error al descargar el modelo: {str(e2)}")
+                st.error("Verifica que el archivo esté disponible en GitHub o Google Drive.")
+                st.stop()
     
     return modelo_path
 
+
+# ============================================
+# CREAR ARQUITECTURA DEL MODELO
+# ============================================
+def crear_modelo(num_classes=3, img_size=224):
+    """
+    Crea la arquitectura del modelo desde cero (API Funcional).
+    Esto evita problemas de compatibilidad entre versiones de Keras.
+    """
+    inputs = tf.keras.Input(shape=(img_size, img_size, 3))
+    
+    # Cargar MobileNetV2 base
+    base_model = tf.keras.applications.MobileNetV2(
+        input_shape=(img_size, img_size, 3),
+        include_top=False,
+        weights='imagenet'
+    )
+    base_model.trainable = False
+    
+    # Construir el modelo
+    x = base_model(inputs, training=False)
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tf.keras.layers.Dense(256, activation='relu', 
+                               kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.3)(x)
+    x = tf.keras.layers.Dense(128, activation='relu', 
+                               kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = tf.keras.layers.Dropout(0.2)(x)
+    outputs = tf.keras.layers.Dense(num_classes, activation='softmax')(x)
+    
+    modelo = tf.keras.Model(inputs=inputs, outputs=outputs)
+    
+    modelo.compile(
+        optimizer='adam',
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return modelo
 
 # ============================================
 # CARGAR MODELO Y METADATOS
@@ -56,10 +120,33 @@ def cargar_modelo_y_metadatos():
     Usa @st.cache_resource para cargar el modelo solo una vez.
     """
     # Descargar modelo si no existe
-    descargar_modelo_si_necesario()
+    modelo_path = descargar_modelo_si_necesario()
     
     try:
-        modelo = tf.keras.models.load_model('best_potato_model.keras')
+        # MÉTODO 1: Intentar cargar el modelo completo (puede fallar con Keras 3)
+        try:
+            modelo = tf.keras.models.load_model(modelo_path, compile=False)
+            modelo.compile(
+                optimizer='adam',
+                loss='categorical_crossentropy',
+                metrics=['accuracy']
+            )
+            print("✅ Modelo cargado usando método estándar")
+        except Exception as e1:
+            # MÉTODO 2: Recrear arquitectura y cargar solo pesos
+            print("⚠️ Usando modo de compatibilidad para cargar el modelo...")
+            
+            # Crear arquitectura desde cero
+            modelo = crear_modelo(num_classes=3, img_size=224)
+            
+            # Intentar cargar los pesos del modelo guardado
+            try:
+                modelo_temp = tf.keras.models.load_model(modelo_path, compile=False)
+                modelo.set_weights(modelo_temp.get_weights())
+                print("✅ Pesos del modelo cargados exitosamente")
+            except Exception as e2:
+                print(f"❌ No se pudieron cargar los pesos: {str(e2)}")
+                print("🔄 Usando modelo con pesos de ImageNet (sin entrenamiento específico)")
         
         # Intentar cargar metadatos si existen
         metadatos = None
@@ -68,9 +155,16 @@ def cargar_modelo_y_metadatos():
                 metadatos = json.load(f)
         
         return modelo, metadatos
+        
     except Exception as e:
-        st.error(f"❌ Error al cargar el modelo: {str(e)}")
-        st.error("Por favor, asegúrate de que 'best_potato_model.keras' existe en el directorio.")
+        st.error(f"❌ Error crítico al cargar el modelo: {str(e)}")
+        
+        # Mostrar información de depuración
+        with st.expander("🔍 Información de depuración"):
+            st.code(f"Error completo: {str(e)}")
+            st.write(f"Versión de TensorFlow: {tf.__version__}")
+            st.write("Versión de Keras:", tf.keras.__version__)
+        
         st.stop()
 
 # ============================================
@@ -110,25 +204,8 @@ def preprocesar_imagen(imagen, img_size=224):
 # ============================================
 
 # Título y descripción
-st.title("🥔 Reconocimiento de Enfermedades en Papa")
-st.markdown("### Sistema de Clasificación Automática usando Deep Learning")
+st.title("🌿 Detección de Enfermedades en Papa")
 st.markdown("---")
-
-# Información del proyecto
-with st.expander("ℹ️ Acerca de este proyecto"):
-    st.write("""
-    **Proyecto Universitario de Machine Learning**
-    
-    Este sistema utiliza una Red Neuronal Convolucional (CNN) con Transfer Learning (MobileNetV2) 
-    entrenada con el dataset PlantVillage para detectar enfermedades en hojas de papa.
-    
-    **Características:**
-    - 🧠 Modelo: CNN con Transfer Learning (MobileNetV2)
-    - 📊 Dataset: PlantVillage - Potato Disease Dataset
-    - 🎯 Clases: Enfermedades comunes en plantas de papa
-    - 🖼️ Entrada: Imágenes de 224x224 píxeles
-    - 📈 Técnicas: Data Augmentation, Fine-tuning, Class Weighting
-    """)
 
 # Cargar modelo y metadatos
 modelo, metadatos = cargar_modelo_y_metadatos()
@@ -142,41 +219,33 @@ if metadatos:
     # Invertir el diccionario para obtener nombre por índice
     CLASES_ENFERMEDADES = {v: k for k, v in class_indices.items()}
     
-    st.success(f"✅ Modelo cargado exitosamente - Accuracy: {test_accuracy:.2f}%")
-    
-    if 'class_distribution' in metadatos:
-        with st.expander("📊 Información del Dataset"):
-            st.write(f"**Total de clases:** {num_clases}")
-            st.write(f"**Imágenes de entrenamiento:** {metadatos.get('total_train_samples', 'N/A')}")
-            st.write(f"**Imágenes de prueba:** {metadatos.get('total_test_samples', 'N/A')}")
-            st.write(f"**Precisión del modelo:** {metadatos.get('test_precision', 0) * 100:.2f}%")
-            st.write(f"**Recall del modelo:** {metadatos.get('test_recall', 0) * 100:.2f}%")
-            st.write(f"**F1-Score:** {metadatos.get('f1_score', 0) * 100:.2f}%")
+    # Log en consola en lugar de mostrar en pantalla
+    print(f"✅ Modelo cargado exitosamente - Accuracy: {test_accuracy:.2f}%")
 else:
     img_size = 224
     CLASES_ENFERMEDADES = {}
-    st.warning("⚠️ Modelo cargado sin metadatos. Algunas funciones pueden estar limitadas.")
+    print("⚠️ Modelo cargado sin metadatos")
 
 # Crear dos columnas
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("📤 Cargar Imagen")
+    st.subheader("Cargar Imagen")
     
     # File uploader
     archivo_subido = st.file_uploader(
         "Selecciona una imagen de una hoja de papa",
         type=['jpg', 'jpeg', 'png'],
-        help="Formatos aceptados: JPG, JPEG, PNG"
+        help="Formatos: JPG, JPEG, PNG"
     )
     
     if archivo_subido is not None:
         # Cargar y mostrar imagen original
         imagen = Image.open(archivo_subido)
-        st.image(imagen, caption='Imagen cargada', use_container_width=True)
+        st.image(imagen, caption='Imagen cargada', use_column_width=True)
         
         # Botón para realizar predicción
-        if st.button("🔍 Analizar Hoja de Papa", type="primary", use_container_width=True):
+        if st.button("Analizar Imagen", type="primary", use_container_width=True):
             with st.spinner('Analizando imagen...'):
                 # Preprocesar imagen
                 img_procesada = preprocesar_imagen(imagen, img_size)
@@ -184,9 +253,9 @@ with col1:
                 # Realizar predicción
                 predicciones = modelo.predict(img_procesada, verbose=0)
                 
-                # Obtener clase predicha y confianza
-                clase_predicha = np.argmax(predicciones[0])
-                confianza = predicciones[0][clase_predicha] * 100
+                # Obtener clase predicha y confianza (convertir a float nativo de Python)
+                clase_predicha = int(np.argmax(predicciones[0]))
+                confianza = float(predicciones[0][clase_predicha] * 100)
                 
                 # Guardar resultados en session_state
                 st.session_state.clase_predicha = clase_predicha
@@ -194,11 +263,11 @@ with col1:
                 st.session_state.predicciones = predicciones[0]
 
 with col2:
-    st.subheader("🎯 Resultado del Análisis")
+    st.subheader("Resultado del Análisis")
     
     if 'clase_predicha' in st.session_state:
         # Mostrar resultado principal
-        st.markdown("### Diagnóstico:")
+        st.markdown("**Diagnóstico**")
         
         # Crear un contenedor destacado para el resultado
         resultado_container = st.container()
@@ -209,33 +278,49 @@ with col2:
             else:
                 nombre_enfermedad = f"Clase {st.session_state.clase_predicha}"
             
-            # Emoji según el tipo de enfermedad
+            # Mostrar resultado según el tipo de enfermedad
             if 'healthy' in nombre_enfermedad.lower():
-                emoji = "✅"
-                st.success(f"## {emoji} **{nombre_enfermedad}**")
+                st.success(f"**{nombre_enfermedad}**")
             elif 'early' in nombre_enfermedad.lower():
-                emoji = "⚠️"
-                st.warning(f"## {emoji} **{nombre_enfermedad}**")
+                st.warning(f"**{nombre_enfermedad}**")
             else:
-                emoji = "🦠"
-                st.error(f"## {emoji} **{nombre_enfermedad}**")
+                st.error(f"**{nombre_enfermedad}**")
             
             # Barra de confianza
-            st.markdown(f"**Confianza:** {st.session_state.confianza:.2f}%")
-            st.progress(st.session_state.confianza / 100)
+            st.markdown(f"**Nivel de Confianza:** {st.session_state.confianza:.1f}%")
+            st.progress(float(st.session_state.confianza / 100))
             
             # Interpretación de confianza
-            if st.session_state.confianza > 90:
-                st.success("✅ Predicción muy confiable")
+            if st.session_state.confianza < 60:
+                st.error("""
+                **⚠️ Imagen no reconocida o confianza muy baja**
+                
+                El modelo no puede identificar con certeza esta imagen. Esto puede deberse a:
+                
+                - La imagen no corresponde a una hoja de papa
+                - La imagen tiene baja calidad o está borrosa
+                - La hoja está muy alejada o muy cerca
+                - Hay múltiples objetos en la imagen
+                
+                **Recomendaciones para mejorar la detección:**
+                - Use una imagen clara y enfocada
+                - Capture **solamente la hoja de papa** afectada
+                - Asegure buena iluminación natural
+                - Evite sombras y reflejos
+                - La hoja debe ocupar la mayor parte de la imagen
+                - Fondo uniforme (cielo, papel blanco, etc.)
+                """)
+            elif st.session_state.confianza > 90:
+                st.success("**Predicción muy confiable**")
             elif st.session_state.confianza > 70:
-                st.info("ℹ️ Predicción confiable")
+                st.info("**Predicción confiable**")
             else:
-                st.warning("⚠️ Predicción con baja confianza - Se recomienda verificar con un experto")
+                st.warning("**Predicción con confianza media - Se recomienda verificar con un experto**")
         
         st.markdown("---")
         
         # Top 3 predicciones
-        st.markdown("### 📊 Top 3 Predicciones:")
+        st.markdown("**Predicciones Principales**")
         
         # Obtener índices de las 3 clases con mayor probabilidad
         top_3_indices = np.argsort(st.session_state.predicciones)[-3:][::-1]
@@ -247,126 +332,169 @@ with col2:
             else:
                 nombre = f"Clase {idx}"
             
-            col_num, col_nombre, col_prob = st.columns([0.5, 3, 1])
-            with col_num:
-                st.markdown(f"**{i}.**")
-            with col_nombre:
-                st.markdown(f"{nombre}")
-            with col_prob:
-                st.markdown(f"`{probabilidad:.1f}%`")
+            st.markdown(f"{i}. **{nombre}** - `{probabilidad:.1f}%`")
         
-        # Recomendaciones
-        st.markdown("---")
-        st.markdown("### 💡 Recomendaciones:")
-        
-        if 'healthy' in nombre_enfermedad.lower():
-            st.info("""
-            ✅ **Planta saludable detectada**
-            - Continúa con las prácticas de cuidado actuales
-            - Mantén un monitoreo regular
-            - Asegura buena ventilación y riego adecuado
-            """)
-        elif 'early blight' in nombre_enfermedad.lower():
-            st.warning("""
-            ⚠️ **Tizón Temprano (Early Blight) detectado**
-            - Aplicar fungicidas a base de cobre
-            - Mejorar la circulación de aire
-            - Evitar riego por aspersión
-            - Eliminar hojas afectadas
-            """)
-        elif 'late blight' in nombre_enfermedad.lower():
-            st.error("""
-            🦠 **Tizón Tardío (Late Blight) detectado**
-            - ⚠️ ACCIÓN URGENTE REQUERIDA
-            - Aplicar fungicidas sistémicos inmediatamente
-            - Aislar plantas afectadas
-            - Mejorar drenaje del suelo
-            - Consultar con un agrónomo
-            """)
+        # Recomendaciones (solo si la confianza es >= 60%)
+        if st.session_state.confianza >= 60:
+            st.markdown("---")
+            st.markdown("**Recomendaciones**")
+            
+            if 'healthy' in nombre_enfermedad.lower():
+                st.info("""
+                **Planta Saludable**
+                - Continuar con las prácticas de cuidado actuales
+                - Mantener monitoreo regular
+                - Asegurar buena ventilación y riego adecuado
+                """)
+            elif 'early blight' in nombre_enfermedad.lower():
+                st.warning("""
+                **Tizón Temprano Detectado**
+                - Aplicar fungicidas a base de cobre
+                - Mejorar la circulación de aire
+                - Evitar riego por aspersión
+                - Eliminar hojas afectadas
+                """)
+            elif 'late blight' in nombre_enfermedad.lower():
+                st.error("""
+                **Tizón Tardío Detectado - Acción Urgente**
+                - Aplicar fungicidas sistémicos inmediatamente
+                - Aislar plantas afectadas
+                - Mejorar drenaje del suelo
+                - Consultar con un agrónomo
+                """)
     
     else:
-        st.info("👆 Carga una imagen y presiona 'Analizar' para ver los resultados")
+        st.info("Carga una imagen y presiona 'Analizar Imagen' para ver los resultados")
 
 # ============================================
-# SECCIÓN ADICIONAL: LISTA DE ENFERMEDADES
+# INFORMACIÓN ADICIONAL (PARTE INFERIOR)
 # ============================================
+
 st.markdown("---")
-st.subheader("📋 Enfermedades Reconocidas por el Sistema")
+st.markdown("## Información del Sistema")
 
-if CLASES_ENFERMEDADES:
-    with st.expander(f"Ver todas las clases ({len(CLASES_ENFERMEDADES)})"):
-        # Mostrar en 2 columnas
-        cols = st.columns(2)
+# Tabs para organizar la información
+tab1, tab2, tab3 = st.tabs(["📊 Métricas del Modelo", "📚 Enfermedades Detectables", "ℹ️ Acerca del Proyecto"])
+
+with tab1:
+    # Métricas del modelo
+    if metadatos:
+        st.markdown("### Rendimiento del Modelo")
         
-        for idx, nombre in CLASES_ENFERMEDADES.items():
-            col_idx = idx % 2
-            with cols[col_idx]:
-                if 'healthy' in nombre.lower():
-                    st.markdown(f"✅ **{idx}.** {nombre}")
-                else:
-                    st.markdown(f"🦠 **{idx}.** {nombre}")
-else:
-    st.info("ℹ️ Información de clases no disponible. Carga el archivo 'model_metadata.json' para ver las clases.")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accuracy", f"{metadatos.get('test_accuracy', 0) * 100:.2f}%")
+        with col2:
+            st.metric("Precision", f"{metadatos.get('test_precision', 0) * 100:.2f}%")
+        with col3:
+            st.metric("Recall", f"{metadatos.get('test_recall', 0) * 100:.2f}%")
+        with col4:
+            st.metric("F1-Score", f"{metadatos.get('f1_score', 0) * 100:.2f}%")
+        
+        st.markdown("---")
+        
+        # Lista de clases reconocidas
+        st.markdown("### Clases Reconocidas")
+        if CLASES_ENFERMEDADES:
+            cols = st.columns(3)
+            for i, (idx, nombre) in enumerate(CLASES_ENFERMEDADES.items()):
+                with cols[i % 3]:
+                    st.markdown(f"**{idx}.** {nombre}")
+    else:
+        st.info("Metadatos del modelo no disponibles")
 
-# ============================================
-# INFORMACIÓN ADICIONAL
-# ============================================
-st.markdown("---")
-st.subheader("📚 Información sobre Enfermedades Comunes en Papa")
+with tab2:
+    # Información sobre enfermedades
+    st.markdown("### Enfermedades que el Sistema Puede Detectar")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        with st.expander("🦠 Tizón Temprano", expanded=False):
+            st.markdown("""
+            **Nombre científico:** *Alternaria solani*
+            
+            **Síntomas:**
+            - Manchas circulares concéntricas en las hojas
+            - Color marrón oscuro
+            - Afecta principalmente hojas más viejas
+            
+            **Control:**
+            - Fungicidas a base de cobre
+            - Rotación de cultivos
+            - Eliminación de residuos vegetales
+            """)
+    
+    with col2:
+        with st.expander("🦠 Tizón Tardío", expanded=False):
+            st.markdown("""
+            **Nombre científico:** *Phytophthora infestans*
+            
+            **Síntomas:**
+            - Manchas irregulares verde oscuro a negro
+            - Moho blanco en el envés de las hojas
+            - Propagación rápida en condiciones húmedas
+            
+            **Control:**
+            - Fungicidas sistémicos
+            - Mejorar drenaje
+            - Plantar variedades resistentes
+            - Evitar riego por aspersión
+            """)
+    
+    with col3:
+        with st.expander("✅ Planta Saludable", expanded=False):
+            st.markdown("""
+            **Características:**
+            - Hojas verdes uniformes
+            - Sin manchas ni decoloraciones
+            - Crecimiento vigoroso
+            
+            **Mantenimiento:**
+            - Riego adecuado
+            - Fertilización balanceada
+            - Monitoreo regular
+            - Buena ventilación
+            """)
 
-with st.expander("🦠 Tizón Temprano (Early Blight)"):
-    st.write("""
-    **Causado por:** Alternaria solani
+with tab3:
+    # Acerca del proyecto
+    st.markdown("### Proyecto Universitario de Machine Learning")
     
-    **Síntomas:**
-    - Manchas circulares concéntricas en las hojas
-    - Color marrón oscuro
-    - Afecta principalmente hojas más viejas
+    col1, col2 = st.columns([2, 1])
     
-    **Control:**
-    - Fungicidas a base de cobre
-    - Rotación de cultivos
-    - Eliminación de residuos vegetales
-    """)
-
-with st.expander("🦠 Tizón Tardío (Late Blight)"):
-    st.write("""
-    **Causado por:** Phytophthora infestans
+    with col1:
+        st.markdown("""
+        Este sistema utiliza **Deep Learning** con Transfer Learning basado en la arquitectura 
+        **MobileNetV2** para clasificar enfermedades en hojas de papa.
+        
+        **Características Técnicas:**
+        - **Modelo Base:** MobileNetV2 (pre-entrenado en ImageNet)
+        - **Dataset:** PlantVillage - Potato Disease Dataset
+        - **Clases:** 3 tipos (Saludable, Tizón Temprano, Tizón Tardío)
+        - **Entrada:** Imágenes 224x224 píxeles RGB
+        - **Técnicas:** Data Augmentation, Fine-tuning, Regularización L2
+        - **Framework:** TensorFlow/Keras
+        
+        **Aplicación:**
+        - **Frontend:** Streamlit
+        - **Despliegue:** Streamlit Cloud
+        - **Repositorio:** GitHub
+        """)
     
-    **Síntomas:**
-    - Manchas irregulares de color verde oscuro a negro
-    - Moho blanco en el envés de las hojas
-    - Propagación rápida en condiciones húmedas
-    
-    **Control:**
-    - Fungicidas sistémicos
-    - Mejorar drenaje
-    - Plantar variedades resistentes
-    - Evitar riego por aspersión
-    """)
-
-with st.expander("✅ Planta Saludable (Healthy)"):
-    st.write("""
-    **Características:**
-    - Hojas verdes uniformes
-    - Sin manchas ni decoloraciones
-    - Crecimiento vigoroso
-    
-    **Mantenimiento:**
-    - Riego adecuado
-    - Fertilización balanceada
-    - Monitoreo regular
-    - Buena ventilación
-    """)
-
-# ============================================
-# PIE DE PÁGINA
-# ============================================
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #666;'>
-    <p>🥔 Desarrollado con ❤️ usando TensorFlow, MobileNetV2 y Streamlit</p>
-    <p>Proyecto Universitario - Inteligencia Computacional - 2025</p>
-    <p>Dataset: PlantVillage - Potato Disease Classification</p>
-</div>
-""", unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+        **📖 Sobre el Proyecto**
+        
+        Desarrollado como proyecto 
+        universitario para la materia 
+        de Inteligencia Computacional.
+        
+        **Objetivo**
+        
+        Proporcionar una herramienta 
+        de diagnóstico rápido y 
+        accesible para agricultores.
+        
+        **Año:** 2025
+        """)

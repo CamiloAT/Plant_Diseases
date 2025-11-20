@@ -1,0 +1,404 @@
+/* ===== FUENTE POPPINS ===== */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* ===== VARIABLES ===== */
+:root {
+    --primary: #4caf50;
+    --primary-dark: #388e3c;
+    --primary-light: #81c784;
+    --text-dark: #212121;
+    --text-light: #666;
+    --bg: #f8f9fa;
+    --white: #ffffff;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* ===== RESET Y GLOBALES ===== */
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Ocultar elementos de Streamlit */
+#MainMenu,
+footer,
+header {
+    visibility: hidden;
+    height: 0;
+}
+
+.stDeployButton {
+    display: none;
+}
+
+/* Background */
+.stApp {
+    background: var(--bg);
+}
+
+/* ===== TÍTULOS ===== */
+h1 {
+    color: var(--primary-dark) !important;
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+h2 {
+    color: var(--text-dark) !important;
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 1rem !important;
+}
+
+h3 {
+    color: var(--text-dark) !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.8rem !important;
+}
+
+/* Subtítulo */
+.stApp>header+div h3 {
+    color: var(--text-light) !important;
+    font-weight: 400 !important;
+    font-size: 1rem !important;
+}
+
+/* ===== CONTENEDORES ===== */
+.stColumn>div {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    height: 100%;
+}
+
+/* ===== BOTONES ===== */
+.stButton>button {
+    background: var(--primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    width: 100% !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25) !important;
+}
+
+.stButton>button:hover {
+    background: var(--primary-dark) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(76, 175, 80, 0.35) !important;
+}
+
+/* ===== FILE UPLOADER ===== */
+.stFileUploader {
+    border: 2px dashed var(--primary) !important;
+    border-radius: 10px !important;
+    background: var(--white) !important;
+    padding: 2rem !important;
+}
+
+.stFileUploader>div {
+    padding: 1rem !important;
+}
+
+.stFileUploader label {
+    color: var(--text-dark) !important;
+    font-weight: 500 !important;
+}
+
+/* ===== IMÁGENES ===== */
+.stImage {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.stImage img {
+    width: 100% !important;
+}
+
+/* ===== PROGRESS BAR ===== */
+.stProgress>div>div {
+    background-color: #e0e0e0 !important;
+}
+
+.stProgress>div>div>div {
+    background: linear-gradient(90deg, var(--primary), var(--primary-light)) !important;
+}
+
+/* ===== MENSAJES ===== */
+.stSuccess {
+    background-color: #2e7d32 !important;
+    border-left: 5px solid #1b5e20 !important;
+    padding: 1.2rem !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.stWarning {
+    background-color: #f57c00 !important;
+    border-left: 5px solid #e65100 !important;
+    padding: 1.2rem !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.stError {
+    background-color: #c62828 !important;
+    border-left: 5px solid #b71c1c !important;
+    padding: 1.2rem !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.stInfo {
+    background-color: #1976d2 !important;
+    border-left: 5px solid #0d47a1 !important;
+    padding: 1.2rem !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* Asegurar que el contenido dentro de los mensajes también sea blanco */
+.stSuccess p,
+.stSuccess strong,
+.stSuccess li {
+    color: #ffffff !important;
+}
+
+.stWarning p,
+.stWarning strong,
+.stWarning li {
+    color: #ffffff !important;
+}
+
+.stError p,
+.stError strong,
+.stError li {
+    color: #ffffff !important;
+}
+
+.stInfo p,
+.stInfo strong,
+.stInfo li {
+    color: #ffffff !important;
+}
+
+/* ===== MARKDOWN ===== */
+.stMarkdown {
+    color: var(--text-dark) !important;
+}
+
+.stMarkdown p {
+    line-height: 1.6 !important;
+    color: #212121 !important;
+}
+
+.stMarkdown strong {
+    color: #212121 !important;
+}
+
+.stMarkdown em {
+    color: #212121 !important;
+}
+
+.stMarkdown li {
+    color: #212121 !important;
+}
+
+.stMarkdown h3,
+.stMarkdown h4,
+.stMarkdown h5 {
+    color: #212121 !important;
+}
+
+/* ===== MÉTRICAS ===== */
+.stMetric {
+    background: rgba(76, 175, 80, 0.05) !important;
+    padding: 0.8rem !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(76, 175, 80, 0.2) !important;
+}
+
+.stMetric label {
+    color: var(--text-light) !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+}
+
+.stMetric [data-testid="stMetricValue"] {
+    color: var(--primary-dark) !important;
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+}
+
+/* ===== SIDEBAR ===== */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #2d5a27 0%, #1b3a18 100%) !important;
+    padding-top: 2rem !important;
+}
+
+[data-testid="stSidebar"] .stMarkdown {
+    color: white !important;
+}
+
+[data-testid="stSidebar"] h3 {
+    color: white !important;
+    font-size: 1.1rem !important;
+    margin-bottom: 1rem !important;
+}
+
+[data-testid="stSidebar"] .stButton>button {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 2px solid var(--primary-light) !important;
+    color: white !important;
+    font-size: 0.95rem !important;
+    padding: 0.7rem 1rem !important;
+}
+
+[data-testid="stSidebar"] .stButton>button:hover {
+    background: var(--primary) !important;
+    border-color: var(--primary-light) !important;
+}
+
+[data-testid="stSidebar"] .stMetric {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+[data-testid="stSidebar"] .stMetric label {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+[data-testid="stSidebar"] .stMetric [data-testid="stMetricValue"] {
+    color: white !important;
+}
+
+[data-testid="stSidebar"] .streamlit-expanderHeader {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    padding: 0.8rem !important;
+}
+
+[data-testid="stSidebar"] hr {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* ===== EXPANDERS ===== */
+.streamlit-expanderHeader {
+    background-color: #f1f8e9 !important;
+    border: 2px solid #c8e6c9 !important;
+    border-radius: 10px !important;
+    padding: 1rem !important;
+    font-weight: 600 !important;
+    color: #2e7d32 !important;
+}
+
+.streamlit-expanderHeader:hover {
+    background-color: #dcedc8 !important;
+    border-color: #4caf50 !important;
+}
+
+.streamlit-expanderContent {
+    border: 1px solid #e0e0e0 !important;
+    border-top: none !important;
+    padding: 1rem !important;
+    background-color: white !important;
+}
+
+.streamlit-expanderContent .stMarkdown {
+    color: #212121 !important;
+}
+
+.streamlit-expanderContent .stMarkdown p,
+.streamlit-expanderContent .stMarkdown li,
+.streamlit-expanderContent .stMarkdown strong,
+.streamlit-expanderContent .stMarkdown em {
+    color: #212121 !important;
+}
+
+/* ===== SEPARADORES ===== */
+hr {
+    margin: 1.5rem 0 !important;
+    border: none !important;
+    border-top: 1px solid #e0e0e0 !important;
+}
+
+/* ===== TABS ===== */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background-color: transparent;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background-color: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: var(--primary-light);
+    color: white;
+    border-color: var(--primary-light);
+}
+
+.stTabs [data-baseweb="tab-panel"] {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    margin-top: 1rem;
+}
+
+/* Asegurar que todo el texto en tabs sea visible */
+.stTabs [data-baseweb="tab-panel"] .stMarkdown {
+    color: #212121 !important;
+}
+
+.stTabs [data-baseweb="tab-panel"] .stMarkdown p,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown li,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown strong,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown em,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown h3,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown h4 {
+    color: #212121 !important;
+}
+
+/* ===== SPINNER ===== */
+.stSpinner>div {
+    border-top-color: var(--primary) !important;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.2rem !important;
+    }
+
+    .stColumn>div {
+        padding: 1.5rem !important;
+    }
+}
