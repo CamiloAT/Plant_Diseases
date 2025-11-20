@@ -133,39 +133,64 @@ h3 {
 
 /* ===== MENSAJES ===== */
 .stSuccess {
-    background-color: #e8f5e9 !important;
-    border-left: 5px solid #4caf50 !important;
+    background-color: #2e7d32 !important;
+    border-left: 5px solid #1b5e20 !important;
     padding: 1.2rem !important;
     border-radius: 8px !important;
-    color: #212121 !important;
+    color: #ffffff !important;
     font-weight: 600 !important;
 }
 
 .stWarning {
-    background-color: #fff3e0 !important;
-    border-left: 5px solid #ff9800 !important;
+    background-color: #f57c00 !important;
+    border-left: 5px solid #e65100 !important;
     padding: 1.2rem !important;
     border-radius: 8px !important;
-    color: #212121 !important;
+    color: #ffffff !important;
     font-weight: 600 !important;
 }
 
 .stError {
-    background-color: #ffebee !important;
-    border-left: 5px solid #f44336 !important;
+    background-color: #c62828 !important;
+    border-left: 5px solid #b71c1c !important;
     padding: 1.2rem !important;
     border-radius: 8px !important;
-    color: #212121 !important;
+    color: #ffffff !important;
     font-weight: 600 !important;
 }
 
 .stInfo {
-    background-color: #e3f2fd !important;
-    border-left: 5px solid #2196f3 !important;
+    background-color: #1976d2 !important;
+    border-left: 5px solid #0d47a1 !important;
     padding: 1.2rem !important;
     border-radius: 8px !important;
-    color: #212121 !important;
+    color: #ffffff !important;
     font-weight: 600 !important;
+}
+
+/* Asegurar que el contenido dentro de los mensajes también sea blanco */
+.stSuccess p,
+.stSuccess strong,
+.stSuccess li {
+    color: #ffffff !important;
+}
+
+.stWarning p,
+.stWarning strong,
+.stWarning li {
+    color: #ffffff !important;
+}
+
+.stError p,
+.stError strong,
+.stError li {
+    color: #ffffff !important;
+}
+
+.stInfo p,
+.stInfo strong,
+.stInfo li {
+    color: #ffffff !important;
 }
 
 /* ===== MARKDOWN ===== */

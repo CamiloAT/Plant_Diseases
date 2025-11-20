@@ -383,13 +383,13 @@ with tab1:
         
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Accuracy", f"{metadatos.get('test_accuracy', 0) * 100:.1f}%")
+            st.metric("Accuracy", f"{metadatos.get('test_accuracy', 0) * 100:.2f}%")
         with col2:
-            st.metric("Precision", f"{metadatos.get('test_precision', 0) * 100:.1f}%")
+            st.metric("Precision", f"{metadatos.get('test_precision', 0) * 100:.2f}%")
         with col3:
-            st.metric("Recall", f"{metadatos.get('test_recall', 0) * 100:.1f}%")
+            st.metric("Recall", f"{metadatos.get('test_recall', 0) * 100:.2f}%")
         with col4:
-            st.metric("F1-Score", f"{metadatos.get('f1_score', 0) * 100:.1f}%")
+            st.metric("F1-Score", f"{metadatos.get('f1_score', 0) * 100:.2f}%")
         
         st.markdown("---")
         
