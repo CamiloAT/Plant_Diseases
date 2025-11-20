@@ -479,14 +479,3 @@ with tab3:
         
         **📅 Año:** 2025
         """)
-
-# Footer
-st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; color: #666; padding: 1rem;'>
-        <p>Desarrollado con ❤️ usando TensorFlow y Streamlit | Universidad - Inteligencia Computacional 2025</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)

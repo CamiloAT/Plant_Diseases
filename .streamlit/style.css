@@ -175,6 +175,23 @@ h3 {
 
 .stMarkdown p {
     line-height: 1.6 !important;
+    color: #212121 !important;
+}
+
+.stMarkdown strong {
+    color: #212121 !important;
+}
+
+.stMarkdown em {
+    color: #212121 !important;
+}
+
+.stMarkdown li {
+    color: #212121 !important;
+}
+
+.stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
+    color: #212121 !important;
 }
 
 /* ===== MÉTRICAS ===== */
@@ -272,6 +289,17 @@ h3 {
     background-color: white !important;
 }
 
+.streamlit-expanderContent .stMarkdown {
+    color: #212121 !important;
+}
+
+.streamlit-expanderContent .stMarkdown p,
+.streamlit-expanderContent .stMarkdown li,
+.streamlit-expanderContent .stMarkdown strong,
+.streamlit-expanderContent .stMarkdown em {
+    color: #212121 !important;
+}
+
 /* ===== SEPARADORES ===== */
 hr {
     margin: 1.5rem 0 !important;
@@ -312,6 +340,20 @@ hr {
     border-radius: 12px;
     box-shadow: var(--shadow);
     margin-top: 1rem;
+}
+
+/* Asegurar que todo el texto en tabs sea visible */
+.stTabs [data-baseweb="tab-panel"] .stMarkdown {
+    color: #212121 !important;
+}
+
+.stTabs [data-baseweb="tab-panel"] .stMarkdown p,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown li,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown strong,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown em,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown h3,
+.stTabs [data-baseweb="tab-panel"] .stMarkdown h4 {
+    color: #212121 !important;
 }
 
 /* ===== SPINNER ===== */
